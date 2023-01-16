@@ -4,6 +4,10 @@ using std::cin;
 using std::cout;
 using std::endl;
 
+//TODO:
+//От ветки dynamic_templated создать ветку dynamic_templates_optimisation, и в этой ветке
+//оптимизировать функции для двумерных массивов, используя функции для одномерных массивов.
+
 #define tab "\t"
 #define delimiter "\n-------------------------------------\n"
 
@@ -32,6 +36,9 @@ template<typename T>T** insert_row(T** arr, int& rows, const int cols, const int
 template<typename T>T** pop_row_back(T** arr, int& rows, const int cols);
 
 template<typename T>void push_col_back(T** arr, const int rows, int& cols);
+
+template<typename T>void do_back(T& buffer, T& arr, int& size);
+template<typename T>void do_front(T& buffer, T& arr, int& size);
 
 //#define DYNAMIC_MEMORY_1
 #define DYNAMIC_MEMORY_2
@@ -84,26 +91,32 @@ void main()
 	Print(arr, rows, cols);
 
 	cout << delimiter << endl;
+	cout << "---Добавление строки в конец массива---" << endl;
 	arr = push_row_back(arr, rows, cols);
 	FillRand(arr[rows - 1], cols, 900, 1000);
 	Print(arr, rows, cols);
 
 	cout << delimiter << endl;
+	cout << "---Добавление строки в начало массива---" << endl;
 	arr = push_row_front(arr, rows, cols);
 	FillRand(arr[0], cols, 100, 200);
 	Print(arr, rows, cols);
-
+	
+	cout << delimiter << endl;
+	cout << "---Добавление строки в указанном месте массива---" << endl;
 	int index;
 	cout << "Введите индекс добавляемой строки: "; cin >> index;
 	arr = insert_row(arr, rows, cols, index);
 	FillRand(arr[index], cols, 400, 500);
 	Print(arr, rows, cols);
-	cout << delimiter << endl;
 
+	cout << delimiter << endl;
+	cout << "---Удаление строки в конце массива---" << endl;
 	arr = pop_row_back(arr, rows, cols);
 	Print(arr, rows, cols);
-	cout << delimiter << endl;
 
+	cout << delimiter << endl;
+	cout << "---Добавление столбика в конец массива---" << endl;
 	push_col_back(arr, rows, cols);
 	Print(arr, rows, cols);
 
@@ -176,7 +189,7 @@ void FillRand(double** arr, const int rows, const int cols)
 
 template<typename T>void Print(T* arr, const int n)
 {
-	cout << typeid(arr).name() << endl;
+	//cout << typeid(arr).name() << endl;
 	for (int i = 0; i < n; i++)
 	{
 		//Через оператор индексирования
@@ -187,45 +200,40 @@ template<typename T>void Print(T* arr, const int n)
 }
 template<typename T>void Print(T** arr, const int rows, const int cols)
 {
-	for (int i = 0; i < rows; i++)
+	for (int i = 0; i < rows; i++) Print(arr[i], cols);
+}
+
+template<typename T> void do_back(T& buffer, T& arr, int& size)	// Вспомогательная универсальная функция, выполняющая п.п. 2, 3, 4.
+{
+	for (int i = 0; i < size; i++)	//2) Копируем все содержимое исходного массива в буферный.
 	{
-		for (int j = 0; j < cols; j++)
-		{
-			cout << arr[i][j] << tab;
-		}
-		cout << endl;
+		buffer[i] = arr[i];
 	}
+	delete[] arr;					//3) Удаляем исходный массив.
+	arr = buffer;					//4) Подменяем адрес в указателе 'arr' адресом нового массива.
+}
+template<typename T> void do_front(T& buffer, T& arr, int& size)	// Вспомогательная универсальная функция, выполняющая п.п. 2, 3, 4.
+{
+	for (int i = 0; i < size; i++)	//2) Копируем все содержимое исходного массива в буферный.
+	{
+		buffer[i + 1] = arr[i];
+	}
+	delete[] arr;					//3) Удаляем исходный массив.
+	arr = buffer;					//4) Подменяем адрес в указателе 'arr' адресом нового массива.
 }
 
 template<typename T>T* push_back(T* arr, int& n, T value)
 {
-	//1) Создаем новый массив нужного размера:
-	T* buffer = new T[n + 1];
-	//2) Копируем все содержимое исходного массива в буферный:
-	for (int i = 0; i < n; i++)
-	{
-		buffer[i] = arr[i];
-	}
-	//3) Удаляем исходный массив:
-	delete[] arr;
-	//4) Подменяем адрес в указателе 'arr' адресом нового массива:
-	arr = buffer;
-	//5) Только после всего этого в конец массива 'arr' можно добавить значение:
-	arr[n] = value;
-	//6) После добавления в массив 'arr' элемента, количество его элементов увеличивается на 1:
-	n++;
-	//7) Mission complete - элемент добавлен!
-	return arr;
+	T* buffer = new T[n + 1];		//1) Создаем новый массив нужного размера.
+	do_back(buffer, arr, n);		// Вызываем вспомогательную универсальную функцию, выполняющую п.п. 2, 3, 4.
+	arr[n] = value;					//5) Только после всего этого в конец массива 'arr' можно добавить значение.
+	n++;							//6) После добавления в массив 'arr' элемента, количество его элементов увеличивается на 1.
+	return arr;						//7) Mission complete - элемент добавлен!
 }
 template<typename T>T* push_front(T* arr, int& n, T value)
 {
 	T* buffer = new T[n + 1];
-	for (int i = 0; i < n; i++)
-	{
-		buffer[i + 1] = arr[i];
-	}
-	delete[] arr;
-	arr = buffer;
+	do_front(buffer, arr, n);
 	arr[0] = value;
 	n++;
 	return arr;
@@ -252,44 +260,28 @@ template<typename T>T* insert(T* arr, int& n, T value, int index)
 template<typename T>T* pop_back(T* arr, int& n)
 {
 	T* buffer = new T[--n];
-	for (int i = 0; i < n; i++)buffer[i] = arr[i];
-	delete[] arr;
-	return buffer;
+	do_back(buffer, arr, n);
+	return arr;
 }
 template<typename T>T* pop_front(T* arr, int& n)
 {
 	T* buffer = new T[--n];
-	for (int i = 0; i < n; i++)buffer[i] = arr[i + 1];
-	delete[] arr;
-	return buffer;
+	do_front(buffer, arr, n);
+	return arr;
 }
 
 template<typename T>T** push_row_back(T** arr, int& rows, const int cols)
 {
-	//1) Создаем буферный массив указателей:
-	T** buffer = new T* [rows + 1];
-	//2) Копируем адреса строк в новый массив указателей:
-	for (int i = 0; i < rows; i++)
-	{
-		buffer[i] = arr[i];
-	}
-	//3) Удаляем исходный массив указателей:
-	delete[] arr;
-	//4) Подменяем адрес в указателе 'arr' адресом нового массива:
-	arr = buffer;
-	//5) Создаем новую строку:
-	arr[rows] = new T[cols] {};
-	//6) После добавления строки, количество строк увеличивается на 1:
-	rows++;
-	//7) Mission complete - строка добавлена. Возвращаем новый массив:
-	return arr;
+	T** buffer = new T* [rows + 1];	//1) Создаем буферный массив указателей.
+	do_back(buffer, arr, rows);		// Вызываем вспомогательную универсальную функцию, выполняющую п.п. 2, 3, 4.
+	arr[rows] = new T[cols] {};		//5) Создаем новую строку.
+	rows++;							//6) После добавления строки, количество строк увеличивается на 1.
+	return arr;						//7) Mission complete - строка добавлена. Возвращаем новый массив.
 }
 template<typename T>T** push_row_front(T** arr, int& rows, const int cols)
 {
 	T** buffer = new T* [rows + 1];
-	for (int i = 0; i < rows; i++)buffer[i + 1] = arr[i];
-	delete[] arr;
-	arr = buffer;
+	do_front(buffer, arr, rows);
 	arr[0] = new T[cols] {};
 	rows++;
 	return arr;
@@ -308,13 +300,10 @@ template<typename T>T** insert_row(T** arr, int& rows, const int cols, const int
 
 template<typename T>T** pop_row_back(T** arr, int& rows, const int cols)
 {
-	//1) Удаляем последнюю строку из памяти:
-	delete[] arr[rows - 1];
-	//2) Переопределяем массив указателей:
-	T** buffer = new T* [--rows];
-	for (int i = 0; i < rows; i++)buffer[i] = arr[i];
-	delete[] arr;
-	return buffer;
+	delete[] arr[rows - 1];								//1) Удаляем последнюю строку из памяти.
+	T** buffer = new T* [--rows];						//2) Переопределяем массив указателей.
+	do_back(buffer, arr, rows);
+	return arr;
 }
 
 template<typename T>void push_col_back(T** arr, const int rows, int& cols)
